@@ -1,0 +1,74 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "sd_xl_base_1.0.safetensors"
+        }
+      },
+      {
+        "id": "load_vae",
+        "type": "VAELoader",
+        "inputs": {
+          "vae_name": "sdxl_vae.safetensors"
+        }
+      },
+      {
+        "id": "image_input",
+        "type": "LoadImage",
+        "inputs": {
+          "image": "{image}"
+        }
+      },
+      {
+        "id": "encode",
+        "type": "VAEEncode",
+        "inputs": {
+          "vae": ["load_vae", 0],
+          "image": ["image_input", 0]
+        }
+      },
+      {
+        "id": "upscale",
+        "type": "LatentUpscale",
+        "inputs": {
+          "samples": ["encode", 0],
+          "scale_factor": 2
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": ["load_model", 0],
+          "positive": ["encode", 0],
+          "negative": ["encode", 0],
+          "latent_image": ["upscale", 0],
+          "seed": 123123,
+          "steps": 20,
+          "cfg": 5,
+          "sampler_name": "euler",
+          "scheduler": "normal"
+        }
+      },
+      {
+        "id": "decode",
+        "type": "VAEDecode",
+        "inputs": {
+          "samples": ["sampler", 0],
+          "vae": ["load_vae", 0]
+        }
+      },
+      {
+        "id": "save",
+        "type": "SaveImage",
+        "inputs": {
+          "filename_prefix": "upscaled_output",
+          "images": ["decode", 0]
+        }
+      }
+    ]
+  }
+}
