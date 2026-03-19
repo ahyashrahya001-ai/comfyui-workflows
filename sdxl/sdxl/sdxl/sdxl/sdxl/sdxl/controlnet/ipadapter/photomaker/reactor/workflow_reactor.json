@@ -1,0 +1,83 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "sd_xl_base_1.0.safetensors"
+        }
+      },
+      {
+        "id": "load_vae",
+        "type": "VAELoader",
+        "inputs": {
+          "vae_name": "sdxl_vae.safetensors"
+        }
+      },
+      {
+        "id": "source_face",
+        "type": "LoadImage",
+        "inputs": {
+          "image": "{source}"
+        }
+      },
+      {
+        "id": "target_image",
+        "type": "LoadImage",
+        "inputs": {
+          "image": "{target}"
+        }
+      },
+      {
+        "id": "reactor_apply",
+        "type": "ReActorFaceSwap",
+        "inputs": {
+          "source_image": ["source_face", 0],
+          "target_image": ["target_image", 0],
+          "blend_strength": 0.85,
+          "face_restore": true
+        }
+      },
+      {
+        "id": "encode",
+        "type": "VAEEncode",
+        "inputs": {
+          "vae": ["load_vae", 0],
+          "image": ["reactor_apply", 0]
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": ["load_model", 0],
+          "positive": ["encode", 0],
+          "negative": ["encode", 0],
+          "latent_image": ["encode", 0],
+          "seed": 999999,
+          "steps": 20,
+          "cfg": 5.5,
+          "sampler_name": "euler",
+          "scheduler": "normal"
+        }
+      },
+      {
+        "id": "decode",
+        "type": "VAEDecode",
+        "inputs": {
+          "samples": ["sampler", 0],
+          "vae": ["load_vae", 0]
+        }
+      },
+      {
+        "id": "save",
+        "type": "SaveImage",
+        "inputs": {
+          "filename_prefix": "reactor_output",
+          "images": ["decode", 0]
+        }
+      }
+    ]
+  }
+}
