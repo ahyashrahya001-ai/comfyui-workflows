@@ -1,0 +1,91 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "sd_xl_base_1.0.safetensors"
+        }
+      },
+      {
+        "id": "load_vae",
+        "type": "VAELoader",
+        "inputs": {
+          "vae_name": "sdxl_vae.safetensors"
+        }
+      },
+      {
+        "id": "controlnet_loader",
+        "type": "ControlNetLoader",
+        "inputs": {
+          "control_net_name": "{controlnet_model}"
+        }
+      },
+      {
+        "id": "control_image",
+        "type": "LoadImage",
+        "inputs": {
+          "image": "{image}"
+        }
+      },
+      {
+        "id": "controlnet_apply",
+        "type": "ControlNetApply",
+        "inputs": {
+          "control_net": ["controlnet_loader", 0],
+          "image": ["control_image", 0],
+          "strength": 1.0
+        }
+      },
+      {
+        "id": "clip",
+        "type": "CLIPTextEncode",
+        "inputs": {
+          "text": "{prompt}"
+        }
+      },
+      {
+        "id": "empty_latent",
+        "type": "EmptyLatentImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1024,
+          "batch_size": 1
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": ["load_model", 0],
+          "positive": ["clip", 0],
+          "negative": ["clip", 1],
+          "latent_image": ["empty_latent", 0],
+          "control": ["controlnet_apply", 0],
+          "seed": 333333,
+          "steps": 30,
+          "cfg": 7,
+          "sampler_name": "euler",
+          "scheduler": "normal"
+        }
+      },
+      {
+        "id": "decode",
+        "type": "VAEDecode",
+        "inputs": {
+          "samples": ["sampler", 0],
+          "vae": ["load_vae", 0]
+        }
+      },
+      {
+        "id": "save",
+        "type": "SaveImage",
+        "inputs": {
+          "filename_prefix": "controlnet_output",
+          "images": ["decode", 0]
+        }
+      }
+    ]
+  }
+}
