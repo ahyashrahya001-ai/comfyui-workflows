@@ -1,0 +1,60 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "sd_xl_anime.safetensors"
+        }
+      },
+      {
+        "id": "clip",
+        "type": "CLIPTextEncode",
+        "inputs": {
+          "text": "{prompt}"
+        }
+      },
+      {
+        "id": "empty_latent",
+        "type": "EmptyLatentImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1024,
+          "batch_size": 1
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": ["load_model", 0],
+          "positive": ["clip", 0],
+          "negative": ["clip", 1],
+          "latent_image": ["empty_latent", 0],
+          "seed": 987654,
+          "steps": 28,
+          "cfg": 6.5,
+          "sampler_name": "euler",
+          "scheduler": "normal"
+        }
+      },
+      {
+        "id": "vae",
+        "type": "VAEDecode",
+        "inputs": {
+          "samples": ["sampler", 0],
+          "vae": ["load_model", 2]
+        }
+      },
+      {
+        "id": "save",
+        "type": "SaveImage",
+        "inputs": {
+          "filename_prefix": "anime_output",
+          "images": ["vae", 0]
+        }
+      }
+    ]
+  }
+}
