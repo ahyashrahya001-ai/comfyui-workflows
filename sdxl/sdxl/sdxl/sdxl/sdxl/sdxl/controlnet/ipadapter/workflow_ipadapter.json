@@ -1,0 +1,91 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "CheckpointLoaderSimple",
+        "inputs": {
+          "ckpt_name": "sd_xl_base_1.0.safetensors"
+        }
+      },
+      {
+        "id": "load_vae",
+        "type": "VAELoader",
+        "inputs": {
+          "vae_name": "sdxl_vae.safetensors"
+        }
+      },
+      {
+        "id": "ipadapter_loader",
+        "type": "IPAdapterLoader",
+        "inputs": {
+          "ipadapter_file": "{ipadapter_model}"
+        }
+      },
+      {
+        "id": "reference_image",
+        "type": "LoadImage",
+        "inputs": {
+          "image": "{image}"
+        }
+      },
+      {
+        "id": "ipadapter_apply",
+        "type": "IPAdapterApply",
+        "inputs": {
+          "ipadapter": ["ipadapter_loader", 0],
+          "image": ["reference_image", 0],
+          "strength": 0.85
+        }
+      },
+      {
+        "id": "clip",
+        "type": "CLIPTextEncode",
+        "inputs": {
+          "text": "{prompt}"
+        }
+      },
+      {
+        "id": "empty_latent",
+        "type": "EmptyLatentImage",
+        "inputs": {
+          "width": 1024,
+          "height": 1024,
+          "batch_size": 1
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": ["load_model", 0],
+          "positive": ["clip", 0],
+          "negative": ["clip", 1],
+          "latent_image": ["empty_latent", 0],
+          "ipadapter": ["ipadapter_apply", 0],
+          "seed": 777777,
+          "steps": 28,
+          "cfg": 6.5,
+          "sampler_name": "euler",
+          "scheduler": "normal"
+        }
+      },
+      {
+        "id": "decode",
+        "type": "VAEDecode",
+        "inputs": {
+          "samples": ["sampler", 0],
+          "vae": ["load_vae", 0]
+        }
+      },
+      {
+        "id": "save",
+        "type": "SaveImage",
+        "inputs": {
+          "filename_prefix": "ipadapter_output",
+          "images": ["decode", 0]
+        }
+      }
+    ]
+  }
+}
